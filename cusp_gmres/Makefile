@@ -1,5 +1,10 @@
 CC=nvcc
-CFLAGS=-I. -I/usr/local/cuda/include
+PROGRAM=cusp_gmres
 
-cusp_gmres: cusp_gmres.cu
-	$(CC) -o cusp_gmres cusp_gmres.cu
+$(PROGRAM): $(PROGRAM).cu
+	$(CC) -o $(PROGRAM) $(PROGRAM).cu
+
+.PHONY: clean
+
+clean:
+	rm -f $(PROGRAM)
