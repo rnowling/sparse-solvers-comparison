@@ -51,21 +51,37 @@ long int elapsed_time_ms(struct timespec &start, struct timespec &end)
 
 int main(int argc, char** argv)
 {
-  if(argc != 4)
+  const char* PRECOND_NONE = "none";
+  const char* PRECOND_DIAG = "diag";
+  
+  if(argc != 5)
     {
-      std::cout << "Usage: " << argv[0] << " <matrix_flname> <input_vector_flname> <output_vector_flname>" << std::endl;
+      std::cout << "Usage: " << argv[0] << " <preconditioner> <matrix_flname> <input_vector_flname> <output_vector_flname>" << std::endl;
+      std::cout << std::endl;
+      std::cout << "Preconditioner can be one of: " << PRECOND_NONE << " " << PRECOND_DIAG << std::endl;
       return 1;
     }
+
+    if(strcmp(argv[1], PRECOND_NONE) != 0 and strcmp(argv[1], PRECOND_DIAG) != 0)
+    {
+      std::cout << "Preconditioner must be one of: " << PRECOND_NONE << " " << PRECOND_DIAG << std::endl;
+      return 1;
+    }
+  else
+    {
+      std::cout << "Using preconditioner: " << argv[1] << std::endl;
+    }
+
   
   // create an empty sparse matrix structure (CSR format)
   cusp::csr_matrix<int, float, cusp::host_memory> A_host;
   // read matrix
-  cusp::io::read_matrix_market_file(A_host, argv[1]);
+  cusp::io::read_matrix_market_file(A_host, argv[2]);
 
   // create empty array
   cusp::array1d<float, cusp::host_memory> b_host(A_host.num_cols, 0);
   // read vector
-  load_vector(argv[2], b_host);
+  load_vector(argv[3], b_host);
 
   std::cout << "Matrix dimensions: " << A_host.num_rows << " " << A_host.num_cols << std::endl;
   std::cout << "Vector length : " << b_host.size() << std::endl;      
@@ -93,14 +109,22 @@ int main(int argc, char** argv)
   // solve the linear system A x = b
   cudaDeviceSynchronize();
   clock_gettime(CLOCK_MONOTONIC, &exec_start);
-  cusp::precond::diagonal<float, cusp::device_memory> M(A);
-  cusp::krylov::cg(A, x, b, monitor, M);
+  if (strcmp(argv[1], PRECOND_DIAG) == 0)
+    {
+      cusp::precond::diagonal<float, cusp::device_memory> M(A);
+      cusp::krylov::cg(A, x, b, monitor, M);
+    }
+    else if(strcmp(argv[1], PRECOND_NONE) == 0)
+    {
+      cusp::identity_operator<float, cusp::device_memory> M(A.num_rows, A.num_cols);
+      cusp::krylov::cg(A, x, b, monitor, M);
+    }
   cudaDeviceSynchronize();
   clock_gettime(CLOCK_MONOTONIC, &exec_end);
 
   // copy results back and write out
   cusp::array1d<float, cusp::host_memory> x_host(x);
-  write_vector(argv[3], x_host);
+  write_vector(argv[4], x_host);
 
   if(monitor.converged())
     {
