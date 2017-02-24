@@ -74,11 +74,13 @@ int main(int argc, char** argv)
   struct timespec copy_end;
   struct timespec exec_start;
   struct timespec exec_end;
-  
+
+  cudaDeviceSynchronize();
   clock_gettime(CLOCK_MONOTONIC, &copy_start);
   cusp::csr_matrix<int, float, cusp::device_memory> A(A_host);
   cusp::array1d<float, cusp::device_memory> b(b_host);  
   cusp::array1d<float, cusp::device_memory> x(A.num_rows, 0);
+  cudaDeviceSynchronize();
   clock_gettime(CLOCK_MONOTONIC, &copy_end);
   
   // set stopping criteria:
@@ -89,9 +91,11 @@ int main(int argc, char** argv)
   cusp::monitor<float> monitor(b, 5000, 1e-6, 1e-6, false);
   
   // solve the linear system A x = b
+  cudaDeviceSynchronize();
   clock_gettime(CLOCK_MONOTONIC, &exec_start);
   cusp::precond::diagonal<float, cusp::device_memory> M(A);
   cusp::krylov::cg(A, x, b, monitor, M);
+  cudaDeviceSynchronize();
   clock_gettime(CLOCK_MONOTONIC, &exec_end);
 
   // copy results back and write out
