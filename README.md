@@ -1,6 +1,14 @@
 # sparse-solvers-comparison
 Comparison of Sparse Iterative Solvers for GPUs
 
+## Scipy
+To run the GMRES solver:
+
+```
+$ cd scipy
+$ python scipy_gmres.py --matrix-fl ../test_data/small_grid/A_matrix.mtx --input-vec ../test_data/small_grid/b_vector.txt
+```
+
 ## CUSP Library
 [CUSP](http://cusplibrary.github.io/) is a library for solving sparse linear systems built on Thrust and CUDA.
 
