@@ -5,16 +5,26 @@
 #include <map>
 #include <vector>
 
+#ifndef NDEBUG
+#define BOOST_UBLAS_NDEBUG
+#endif
+
+#include <boost/numeric/ublas/matrix_sparse.hpp>
+
 #ifndef VIENNACL_WITH_CUDA
 #define VIENNACL_WITH_CUDA
 #endif
 
+#define VIENNACL_WITH_UBLAS 1 
+
 #include <viennacl/scalar.hpp>
 #include <viennacl/vector.hpp>
 #include <viennacl/compressed_matrix.hpp>
-#include <viennacl/linalg/gmres.hpp>
 #include <viennacl/linalg/cg.hpp>
+#include <viennacl/linalg/gmres.hpp>
 #include <viennacl/linalg/row_scaling.hpp>
+
+using namespace boost::numeric;
 
 void load_vector(const char* flname, std::vector<float> &v)
 {
@@ -36,7 +46,7 @@ void load_vector(const char* flname, std::vector<float> &v)
   input_data.close();
 }
 
-void load_matrix(const char* filename, std::vector< std::map< unsigned int, float > > &cpu_sparse_matrix,
+void load_matrix(const char* filename, ublas::compressed_matrix<float> &cpu_sparse_matrix,
                  unsigned int &n_rows, unsigned int &n_cols)
 {
   unsigned n_nnzs;
@@ -59,7 +69,7 @@ void load_matrix(const char* filename, std::vector< std::map< unsigned int, floa
   
   printf("Reading a %d x %d matrix\n", n_rows, n_cols);
 
-  cpu_sparse_matrix.resize(n_rows);
+  cpu_sparse_matrix.resize(n_rows, n_cols, false);
     
   // read in data
   printf("Reading data\n");
@@ -77,7 +87,7 @@ void load_matrix(const char* filename, std::vector< std::map< unsigned int, floa
         }
       
       // convert from 1-indexing to 0-indexing
-      cpu_sparse_matrix[row - 1][col - 1] = value;
+      cpu_sparse_matrix(row - 1, col - 1) = value;
     }
   
   fclose(matrix_file);
@@ -130,7 +140,7 @@ int main(int argc, char** argv)
     }
 
   unsigned int n_rows, n_cols;
-  std::vector< std::map< unsigned int, float > > A_host;
+  ublas::compressed_matrix<float> A_host;
   load_matrix(argv[2], A_host, n_rows, n_cols);
   viennacl::compressed_matrix<float> A_gpu(n_rows, n_cols);
 
@@ -138,8 +148,9 @@ int main(int argc, char** argv)
   load_vector(argv[3], b_host);
   viennacl::vector<float> b_gpu(b_host.size());
 
-  std::cout << "Matrix dimensions: " << A_gpu.size1() << " " << A_gpu.size2() << std::endl;
-  std::cout << "Rows: " << A_host.size() << std::endl;
+  std::cout << "Read dimensions: " << n_rows << " " << n_cols << std::endl;
+  std::cout << "CPU Matrix dimensions: " << A_host.size1() << " " << A_host.size2() << std::endl;
+  std::cout << "GPU Matrix dimensions: " << A_gpu.size1() << " " << A_gpu.size2() << std::endl;
   std::cout << "Vector length : " << b_host.size() << std::endl;      
 
   struct timespec copy_start;
@@ -160,7 +171,7 @@ int main(int argc, char** argv)
   //  relative_tolerance = 1e-6
   //  absolute_tolerance = 1e-6
   //  verbose            = true
-  viennacl::linalg::cg_tag my_tag(1e-6, 5000);
+  viennacl::linalg::gmres_tag my_tag(1e-6, 5000, 50);
   
   // solve the linear system A x = b
   std::cout << "Solve system" << std::endl;
