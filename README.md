@@ -17,7 +17,7 @@ To run the GMRES solver:
 ```
 $ cd cusp_gmres
 $ make
-$ ./cusp_gmres ../test_data/small_grid/A_matrix.mtx ../test_data/small_grid/b_vector.txt
+$ ./cusp_gmres diag ../test_data/small_grid/A_matrix.mtx ../test_data/small_grid/b_vector.txt x_vector.txt
 ```
 
 To run the CG solver:
@@ -25,5 +25,16 @@ To run the CG solver:
 ```
 $ cd cusp_cg
 $ make
-$ ./cusp_cg ../test_data/small_grid/A_matrix.mtx ../test_data/small_grid/b_vector.txt
+$ ./cusp_cg diag ../test_data/small_grid/A_matrix.mtx ../test_data/small_grid/b_vector.txt x_vector.txt
+```
+
+## ViennaCL Library
+[ViennaCL](http://viennacl.sourceforge.net/) is a library for solving sparse linear systems which supports OpenCL, CUDA, and Intel MIC accelerators.
+
+To run the GMRES solver:
+
+```
+$ cd viennacl
+$ make
+$ ./viennacl diag ../test_data/small_grid/A_matrix.mtx ../test_data/small_grid/b_vector.txt x_vector.txt
 ```
