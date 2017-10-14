@@ -14,6 +14,34 @@ def read_vector(flname):
             vec.append(float(ln))
     return np.array(vec)
 
+def custom_cg(A, b, M, max_iter, tol):
+    x = np.random.randn(*b.shape)
+    r_0 = b - A.dot(b)
+    z_0 = M.matvec(r_0)
+    p = z_0
+    k = 0
+    for i in xrange(max_iter):
+        print "Iteration", (i+1)
+        A_p = A.dot(p)
+        alpha = r_0.dot(z_0) / p.dot(A_p)
+        x += alpha * p
+        r_1 = r_0 - alpha * A_p
+
+        print "Residual L2 norm", np.linalg.norm(r_1)
+
+        if np.linalg.norm(r_1) < tol:
+            return x, 0
+        
+        z_1 = M.matvec(r_1)
+        beta = z_1.dot(r_1) / z_0.dot(r_0)
+        p = z_1 + beta * p
+
+        r_0 = r_1
+        z_0 = z_1
+
+    return x, 0
+        
+
 def parseargs():
     parser = argparse.ArgumentParser()
 
@@ -30,6 +58,13 @@ def parseargs():
                         required=True,
                         choices=["diagonal",
                                  "ilu"])
+
+    parser.add_argument("--solver",
+                        type=str,
+                        required=True,
+                        choices=["cg",
+                                 "gmres",
+                                 "custom-cg"])
 
     return parser.parse_args()
 
@@ -53,8 +88,16 @@ if __name__ == "__main__":
         M = LA.LinearOperator(A.shape, M_x)
     else:
         raise Exception, "Unknown preconditioner %s" % args.preconditioner
+
+    if args.solver == "gmres":
+        x, result = LA.gmres(A, b, M=M, tol=1e-6, maxiter=5000, restart=50)
+    elif args.solver == "cg":
+        x, result = LA.cg(A, b, tol=1e-6, maxiter=5000, M=M)
+    elif args.solver == "custom-cg":
+        x, result = custom_cg(A, b, M, 5000, 1e-6)
+    else:
+        raise Exception, "Uknown solver %s" % args.solver
     
-    x, result = LA.gmres(A, b, M=M, tol=1e-6, maxiter=5000, restart=50)
     after = time.clock()
 
     elapsed = after - before
