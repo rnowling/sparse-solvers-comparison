@@ -25,6 +25,12 @@ def parseargs():
                         required=True,
                         type=str)
 
+    parser.add_argument("--preconditioner",
+                        type=str,
+                        required=True,
+                        choices=["diagonal",
+                                 "ilu"])
+
     return parser.parse_args()
 
 if __name__ == "__main__":
@@ -34,9 +40,20 @@ if __name__ == "__main__":
     b = read_vector(args.input_vec)
 
     before = time.clock()
-    D = sp.diags(A.diagonal(), offsets=0).tocsr()
-    M_x = lambda x: LA.spsolve(D, x)
-    M = LA.LinearOperator(A.shape, M_x)
+    
+    if args.preconditioner == "diagonal":
+        D = sp.diags(A.diagonal(), offsets=0).tocsr()
+        M_x = lambda x: LA.spsolve(D, x)
+        M = LA.LinearOperator(A.shape, M_x)
+    elif args.preconditioner == "ilu":
+        M2 = LA.spilu(A.tocsc(),
+                      drop_tol=1e-8,
+                      fill_factor=100)
+        M_x = lambda x: M2.solve(x)
+        M = LA.LinearOperator(A.shape, M_x)
+    else:
+        raise Exception, "Unknown preconditioner %s" % args.preconditioner
+    
     x, result = LA.gmres(A, b, M=M, tol=1e-6, maxiter=5000, restart=50)
     after = time.clock()
 
